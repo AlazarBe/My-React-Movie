@@ -1,28 +1,42 @@
 import MovieCard from "../components/MovieCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { searchMovies, getPopularMovies } from "../services/api";
 import "../css/Home.css";
 function Home() {
   const [searchQuery, setSearchQuery] = useState("");
-  const movies = [
-    {
-      id: 1,
-      title: "Shawshank Redemption",
-      year: 1994,
-    },
-    {
-      id: 2,
-      title: "Godfather",
-      year: 1972,
-    },
-    {
-      id: 3,
-      title: "Dark Knight",
-      year: 2008,
-    },
-  ];
+  const [movies, setMovies] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const loadPopularMovies = async () => {
+      try {
+        const popularMovies = await getPopularMovies();
+        setMovies(popularMovies);
+      } catch (err) {
+        console.log(err);
+        setError("failed to load movies");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPopularMovies();
+  }, []);
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    if (loading) return;
+    setLoading(true);
 
-  const handleSearch = () => {
-    alert(searchQuery);
+    try {
+      const searchResults = await searchMovies(searchQuery);
+      setMovies(searchResults);
+      setError(null);
+    } catch (err) {
+      console.log(err);
+      setError("failed to search movies");
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="home">
@@ -38,12 +52,16 @@ function Home() {
           Search
         </button>
       </form>
-
-      <div className="movie-grid">
-        {movies.map((movie) => (
-          <MovieCard key={movie.id} movie={movie} />
-        ))}
-      </div>
+      {error && <div className="error-message">{error}</div>}
+      {loading ? (
+        <div className="loading">Loading...</div>
+      ) : (
+        <div className="movies-grid">
+          {movies.map((movie) => (
+            <MovieCard key={movie.id} movie={movie} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
